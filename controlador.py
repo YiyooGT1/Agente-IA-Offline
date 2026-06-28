@@ -9,12 +9,12 @@ class ScannerControlador:
         self.vista = ScannerVista(root, self)
 
     def procesar_ruta(self, ruta):
-        # 1. Validar Detección (Requerimiento AIB-12)
+        # 1. Validar Detección
         if not self.modelo.verificar_ruta(ruta):
             self.vista.mostrar_error("Error", "El disco o carpeta no existe.")
             return
 
-        # 2. Validar Permisos (Requerimiento AIB-14)
+        # 2. Validar Permisos
         tiene_permiso = self.modelo.validar_permisos(ruta)
         if not tiene_permiso:
             # Registramos en MySQL el intento de acceso fallido
@@ -22,7 +22,7 @@ class ScannerControlador:
             self.vista.mostrar_error("Permisos", "No tienes permisos de lectura en esta ruta.")
             return
 
-        # 3. Leer Carpetas y Archivos (Requerimiento AIB-13)
+        # 3. Leer Carpetas y Archivos
         contenido = self.modelo.leer_contenido(ruta)
         total_carpetas = len(contenido['carpetas'])
         total_archivos = len(contenido['archivos'])
