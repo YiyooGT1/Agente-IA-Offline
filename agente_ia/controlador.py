@@ -31,7 +31,6 @@ class ScannerControlador:
         self.vista = ScannerVista(root, self)
         self.root.after(100, self._revisar_cola)
 
-    # ================= acciones de la ventana principal =================
     def procesar_ruta(self, ruta, recursivo=True):
         ruta = os.path.normpath(ruta)
         escaner = Escaner(self._cancelar)

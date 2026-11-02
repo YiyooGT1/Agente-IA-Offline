@@ -6,6 +6,9 @@ import config
 from modelo import organizador
 from modelo.opciones import accesos_rapidos, claves_destino
 from modelo.utiles import es_descendiente, formatear_tamano, norm
+class ToolTip:
+    def __init__(self, widget, text):
+        self.tipwindow = None
 
 
 class VistaPrevia(tk.Toplevel):
@@ -35,7 +38,6 @@ class VistaPrevia(tk.Toplevel):
         self._tab_duplicados()
         self._tab_destinos()
         self._tab_carpetas()
-
         self._refrescar_todo()
 
     # ------------------------------------------------------------------ utilidades
@@ -130,36 +132,52 @@ class VistaPrevia(tk.Toplevel):
         self._refrescar_todo()
 
     # ------------------------------------------------------------------ pestaña Destinos
+# -------------------------------------------------------- pestaña Destinos
     def _tab_destinos(self):
         tab = ttk.Frame(self.nb, padding=10)
         self.nb.add(tab, text="Destinos")
         tab.columnconfigure(2, weight=1)
-        ttk.Label(tab, wraplength=840, justify="left",
-                  text="Elige dónde quieres guardar cada tipo de archivo (una carpeta de tus accesos rápidos, "
-                       "o cualquier ruta con «Examinar»). Desmarca «Mover» para dejar un tipo donde está. "
-                       "«Otros» (.ini, .cfg, .dat…) viene desactivado porque suelen ser configuraciones de programas. "
-                       "Tus elecciones se recuerdan para la próxima vez."
-                  ).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 10))
+
+        # 1. TEXTO INSTRUCTIVO RESUMIDO
+        instrucciones = "Configura la ruta de destino. Desmarca la casilla para dejar un tipo de archivo en su lugar original."
+        ttk.Label(tab, wraplength=840, justify="left", text=instrucciones).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 10))
+
+        # 2. ENCABEZADOS DE COLUMNA
+        ttk.Label(tab, text="Categoría", font=("Segoe UI", 9, "bold")).grid(row=1, column=0, sticky="w", padx=(0, 10), pady=5)
+        ttk.Label(tab, text="Activar", font=("Segoe UI", 9, "bold")).grid(row=1, column=1, padx=4, pady=5)
+        ttk.Label(tab, text="Ruta de Destino", font=("Segoe UI", 9, "bold")).grid(row=1, column=2, sticky="w", padx=4, pady=5)
+        
+        # 3. LÍNEA SEPARADORA
+        ttk.Separator(tab, orient='horizontal').grid(row=2, column=0, columnspan=4, sticky="ew", pady=(0, 10))
 
         self._vars_destino, self._vars_activa = {}, {}
-        for fila, clave in enumerate(claves_destino(), start=1):
+        
+        # Usamos start=3 porque las filas 0, 1 y 2 ahora están ocupadas por instrucciones y encabezados
+        for fila, clave in enumerate(claves_destino(), start=3):
             etiqueta = "Duplicados" if clave == config.CARPETA_DUPLICADOS else clave
-            ttk.Label(tab, text=etiqueta).grid(row=fila, column=0, sticky="w", padx=(0, 10), pady=3)
+            ttk.Label(tab, text=etiqueta).grid(row=fila, column=0, sticky="w", padx=(0, 10), pady=6)
+
             if clave != config.CARPETA_DUPLICADOS:
                 va = tk.BooleanVar(value=self.op.activas[clave])
-                ttk.Checkbutton(tab, text="Mover", variable=va,
-                                command=lambda c=clave: self._cambio_activa(c)).grid(row=fila, column=1, padx=4)
+                # Checkbutton SIN el texto "Mover" y con más espacio vertical (pady=6)
+                ttk.Checkbutton(tab, variable=va, command=lambda c=clave: self._cambio_activa(c)).grid(row=fila, column=1, padx=4, pady=6)
                 self._vars_activa[clave] = va
+
             vd = tk.StringVar(value=self.op.destinos[clave])
             cmb = ttk.Combobox(tab, textvariable=vd, values=[self.op.destino_defecto(clave)] + self._accesos)
-            cmb.grid(row=fila, column=2, sticky="ew", padx=4)
+            cmb.grid(row=fila, column=2, sticky="ew", padx=4, pady=6)
+            
+            # TOOLTIP: Muestra la ruta completa al pasar el ratón por el Combobox
+            ToolTip(cmb, text=f"Ruta actual asignada:\n{vd.get()}")
+
             for ev in ("<<ComboboxSelected>>", "<Return>", "<FocusOut>"):
                 cmb.bind(ev, lambda e, c=clave: self._cambio_destino(c))
-            ttk.Button(tab, text="Examinar…",
-                       command=lambda c=clave: self._examinar_destino(c)).grid(row=fila, column=3, padx=(4, 0))
+                
+            ttk.Button(tab, text="Examinar...", command=lambda c=clave: self._examinar_destino(c)).grid(row=fila, column=3, padx=(4, 0), pady=6)
             self._vars_destino[clave] = vd
-        ttk.Button(tab, text="Restablecer valores predeterminados", command=self._restablecer
-                   ).grid(row=len(claves_destino()) + 1, column=0, columnspan=4, sticky="e", pady=12)
+
+        # Ajustamos la fila del botón final sumando 3 por los nuevos encabezados
+        ttk.Button(tab, text="Restablecer valores predeterminados", command=self._restablecer).grid(row=len(claves_destino()) + 3, column=0, columnspan=4, sticky="e", pady=12)
 
     def _cambio_activa(self, clave):
         self.c.cambiar_activa(clave, self._vars_activa[clave].get())
